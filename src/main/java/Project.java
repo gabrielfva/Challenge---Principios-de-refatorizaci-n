@@ -46,9 +46,9 @@ public class Project {
     }
 
     public void prettyPrint() {
-        log.info("Project: {}; type: {}", getName(), getType());
-        log.info(getProjectDetails());
-        log.info(getLastUpdateTime());
-        log.info(getLoginStatistics());
+        log.info("Project: {};type: {}", getName(), getType());
+        log.info("Project details: {}", getProjectDetails());
+        log.info("Last update time: {}", getLastUpdateTime());
+        log.info("Login statistics: {}", getLoginStatistics());
     }
 }
