@@ -1,11 +1,12 @@
-
+@lombok.extern.slf4j.Slf4j
 public class Project {
-    
+
+    private static final String NEVERUPDATED = "neverUpdated";
     private final String name;
     private final ProjectType type;
-    private String projectDetails = "neverUpdated";
-    private String lastUpdateTime = "neverUpdated";
-    private String loginStatistics = "neverUpdated";
+    private String projectDetails = NEVERUPDATED;
+    private String lastUpdateTime = NEVERUPDATED;
+    private String loginStatistics = NEVERUPDATED;
     
     public Project(String name, ProjectType type) {
         this.name = name;
@@ -45,14 +46,9 @@ public class Project {
     }
 
     public void prettyPrint() {
-        System.out.println("Project: " + getName() + "; type: " + getType());
-        System.out.println(getProjectDetails());
-        System.out.println(getLastUpdateTime());
-        System.out.println(getLoginStatistics());
-        
-        
+        log.info("Project: {}; type: {}", getName(), getType());
+        log.info(getProjectDetails());
+        log.info(getLastUpdateTime());
+        log.info(getLoginStatistics());
     }
-    
-    
-
 }
