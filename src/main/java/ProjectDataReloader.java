@@ -1,6 +1,5 @@
 
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.event.Level;
 
 import java.util.Date;
 
@@ -59,6 +58,61 @@ public abstract class ProjectDataReloader {
      */
     protected abstract void reloadProjectData();
 
+    private boolean reloadForProject() {
+        try {
+
+            // call a project-type-specific reloading procedure that reloads some of the project data from
+            // persistence
+            log.info("Starting reloading for project {}", project.getName());
+            reloadProjectData();
+            log.info("Done reloading for project {}", project.getName());
+            project.prettyPrint();
+
+            // check the termination flag
+            synchronized (ProjectDataReloader.this) {
+                if (stopped) {
+                    return true;
+                }
+            }
+        } catch (Exception e) {
+            log.error("Could not load project data for project {}: {}", project.getName(), e.getMessage());
+        }
+
+        return false;
+    }
+
+    private void timeForTheLastReload(){
+        // remember the start time
+        long s = System.currentTimeMillis();
+        long timeUsedForLastReload = System.currentTimeMillis() - s;
+
+        // sleep until next fetch
+        if (timeUsedForLastReload < RELOAD_PERIOD) {
+            long timeLeftToSleep = RELOAD_PERIOD - timeUsedForLastReload;
+
+            while (timeLeftToSleep > 0) {
+
+                // check the termination flag
+                synchronized (ProjectDataReloader.this) {
+                    if (stopped) {
+                        break;
+                    }
+                }
+
+                try {
+                    // sleep for SLEEPING_PERIOD
+                    Thread.sleep(SLEEPING_PERIOD_RELOADER1);
+                } catch (InterruptedException ex) {
+                    log.warn("Interrupted!", ex);
+                    Thread.currentThread().interrupt();
+                }
+
+                // dec the timeLeft
+                timeLeftToSleep -= SLEEPING_PERIOD_RELOADER1;
+            }
+        }
+    }
+
     public void start() {
         // inline implementation of runnable for reloader thread
         // remember the start time
@@ -70,73 +124,20 @@ public abstract class ProjectDataReloader {
         // check the termination flag
         // sleep for SLEEPING_PERIOD
         // dec the timeLeft
-        /**
-         * The per-project reloading thread
-         */
         Thread thread = new Thread(() -> {
             log.info("Starting project data reloading thread for project \"{}\", type: {}", project.getName(),
                     project.getType());
 
             while (!stopped) {
-
-                // remember the start time
-                long s = System.currentTimeMillis();
-
-                try {
-
-                    // call a project-type-specific reloading procedure that reloads some of the project data from
-                    // persistence
-                    log.info("Starting reloading for project {}", project.getName());
-                    reloadProjectData();
-                    log.info("Done reloading for project {}", project.getName());
-                    project.prettyPrint();
-                    log.info("\n");
-
-                    // check the termination flag
-                    synchronized (ProjectDataReloader.this) {
-                        if (stopped) {
-                            break;
-                        }
-                    }
-                } catch (Exception e) {
-                    log.error("Could not load project data for project {}: {}", project.getName(), e.getMessage());
+                if (this.reloadForProject()) {
+                    break;
                 }
+                timeForTheLastReload();
 
-                // calculate the time taken for the reload
-                long timeUsedForLastReload = System.currentTimeMillis() - s;
-
-                // sleep until next fetch
-                if (timeUsedForLastReload < RELOAD_PERIOD) {
-                    long timeLeftToSleep = RELOAD_PERIOD - timeUsedForLastReload;
-
-                    while (timeLeftToSleep > 0) {
-
-                        // check the termination flag
-                        synchronized (ProjectDataReloader.this) {
-                            if (stopped) {
-                                break;
-                            }
-                        }
-
-                        try {
-                            // sleep for SLEEPING_PERIOD
-                            Thread.sleep(SLEEPING_PERIOD_RELOADER1);
-                        } catch (InterruptedException ex) {
-                            //log.warn("Interrupted!", ex);
-                            //Thread.currentThread().interrupt();
-                            continue;
-                        }
-
-                        // dec the timeLeft
-                        timeLeftToSleep -= SLEEPING_PERIOD_RELOADER1;
-                    }
-                }
                 reloadsCounter++;
             }
-
             log.info("Stopped project persistence reloading thread for project \" {} \"", project.getName());
         });
-
         thread.start();
     }
 
