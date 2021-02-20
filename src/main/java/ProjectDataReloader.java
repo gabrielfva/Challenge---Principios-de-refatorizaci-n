@@ -1,4 +1,6 @@
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.util.Date;
 
 
@@ -11,8 +13,9 @@ import java.util.Date;
  * @author Abby B. Bullock
  * 
  */
+@Slf4j
 public abstract class ProjectDataReloader {
-    
+
     /**
      * Reload period is 30 seconds
      */
@@ -21,7 +24,8 @@ public abstract class ProjectDataReloader {
     /**
      * Sleep by small portions of 1 second
      */
-    private static final long SLEEPING_PERIOD = 1000;
+    private static final long SLEEPING_PERIOD_RELOADER1 = 1000;
+    private static final long SLEEPING_PERIOD_RELOADER2 = 18000;
 
     
     private boolean stopped = false;
@@ -65,8 +69,8 @@ public abstract class ProjectDataReloader {
 
             @Override
             public void run() {
-                System.out.println("Starting project data reloading thread for project \"" + project.getName() + "\", type: "
-                    + project.getType());
+                log.info("Starting project data reloading thread for project \"{}\" , type: {}", project.getName(),
+                    project.getType());
 
                 while (!stopped) {
 
@@ -77,11 +81,11 @@ public abstract class ProjectDataReloader {
 
                         // call a project-type-specific reloading procedure that reloads some of the project data from
                         // persistence
-                        System.out.println("Starting reloading for project " + project.getName());
+                        log.info("Starting reloading for project {}", project.getName());
                         reloadProjectData();
-                        System.out.println("Done reloading for project " + project.getName());
+                        log.info("Done reloading for project {}", project.getName());
                         project.prettyPrint();
-                        System.out.println();
+                        log.info("\n");
 
                         // check the termination flag
                         synchronized (ProjectDataReloader.this) {
@@ -90,8 +94,8 @@ public abstract class ProjectDataReloader {
                             }
                         }
                     } catch (Exception e) {
-                        System.err.println("Could not load project data for ptoject " + project.getName() + " : "
-                            + e.getMessage());
+                        log.error("Could not load project data for project {}: {}", project.getName(),
+                            e.getMessage());
                     }
 
                     // calculate the time taken for the reload
@@ -112,19 +116,19 @@ public abstract class ProjectDataReloader {
 
                             try {
                                 // sleep for SLEEPING_PERIOD
-                                Thread.sleep(SLEEPING_PERIOD);
+                                Thread.sleep(SLEEPING_PERIOD_RELOADER1);
                             } catch (InterruptedException ex) {
                                 continue;
                             }
 
                             // dec the timeLeft
-                            timeLeftToSleep -= SLEEPING_PERIOD;
+                            timeLeftToSleep -= SLEEPING_PERIOD_RELOADER1;
                         }
                     }
                     reloadsCounter++;
                 }
 
-                System.out.println("Stopped project persistence reloading thread for project \"" + project.getName() + "\"");
+                log.info("Stopped project persistence reloading thread for project \" {} \"", project.getName());
             }
         });
 
@@ -132,8 +136,8 @@ public abstract class ProjectDataReloader {
     }
     
     protected void loadProjectDetails() {
-        System.out.println("Loading project details for project " + project.getName());
-        System.out.println("(Talking to database and updating our project-related objects.)");
+        log.info("Loading project details for project {}", project.getName());
+        log.info("(Talking to database and updating our project-related objects.)");
         //this could be a lot of lines of code and involve collaborators, helpers, etc
         //...
         //...
@@ -157,8 +161,8 @@ public abstract class ProjectDataReloader {
     }
     
     protected void loadLastUpdateTime() {
-        System.out.println("Loading last update time for project " + project.getName());
-        System.out.println("(Checking the database to see when the data was last refreshed)");
+        log.info("Loading last update time for project {}", project.getName());
+        log.info("(Checking the database to see when the data was last refreshed)");
         // this might also be a lot of lines of code
         //...
         //...
@@ -178,8 +182,8 @@ public abstract class ProjectDataReloader {
     }
     
     protected void loadLoginStatistics() {
-        System.out.println("Loading login statistics for project " + project.getName());
-        System.out.println("(Talking to our login server via http request)");
+        log.info("Loading login statistics for project {}", project.getName());
+        log.info("(Talking to our login server via http request)");
         // This might involve other collaborators/helpers to make the http request and 
         // handle the response.
         //...
@@ -198,8 +202,8 @@ public abstract class ProjectDataReloader {
     }
     
     public void stop() {
-        
-        System.out.println("Stopping project persistence reloading thread for project \"" + project.getName() + "\"...");
+
+        log.info("Stopping project persistence reloading thread for project \" {} \"...", project.getName());
         
         stopped = true;
     }
@@ -211,18 +215,18 @@ public abstract class ProjectDataReloader {
         
         reloader1.start();
         try {
-            Thread.sleep(SLEEPING_PERIOD);
+            Thread.sleep(SLEEPING_PERIOD_RELOADER1);
         } catch (InterruptedException e) {
             
         }
         reloader2.start();
         
         try {
-            Thread.sleep(18000);
+            Thread.sleep(SLEEPING_PERIOD_RELOADER2);
         } catch (InterruptedException e) {
         }
         
-        reloader1.stop(); reloader2.stop();
+        reloader1.stop();
+        reloader2.stop();
     }
-
 }

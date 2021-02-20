@@ -18,7 +18,5 @@ public class StaticProjectDataReloader extends ProjectDataReloader {
         if (reloadsCounter % 2 == 0) {
             new Thread(this::loadLoginStatistics).start();
         }
-        
     }
-
 }
