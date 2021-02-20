@@ -15,7 +15,7 @@ import java.util.Date;
  */
 @Slf4j
 public abstract class ProjectDataReloader {
-
+    private static final String INTERRUPTED = "Interrupted!: {}";
     /**
      * Reload period is 30 seconds
      */
@@ -30,11 +30,6 @@ public abstract class ProjectDataReloader {
     
     private boolean stopped = false;
 
-    /**
-     * The per-project reloading thread
-     */
-    private Thread thread;
-    
     protected final Project project;
     
     /**
@@ -65,27 +60,56 @@ public abstract class ProjectDataReloader {
     
     public void start() {
         // inline implementation of runnable for reloader thread
-        thread = new Thread(new Runnable() {
-
-            @Override
-            public void run() {
-                log.info("Starting project data reloading thread for project \"{}\" , type: {}", project.getName(),
+        // remember the start time
+        // call a project-type-specific reloading procedure that reloads some of the project data from
+        // persistence
+        // check the termination flag
+        // calculate the time taken for the reload
+        // sleep until next fetch
+        // check the termination flag
+        // sleep for SLEEPING_PERIOD
+        // dec the timeLeft
+        /**
+         * The per-project reloading thread
+         */
+        Thread thread = new Thread(() -> {
+            log.info("Starting project data reloading thread for project \"{}\" , type: {}", project.getName(),
                     project.getType());
 
-                while (!stopped) {
+            while (!stopped) {
 
-                    // remember the start time
-                    long s = System.currentTimeMillis();
+                // remember the start time
+                long s = System.currentTimeMillis();
 
-                    try {
+                try {
 
-                        // call a project-type-specific reloading procedure that reloads some of the project data from
-                        // persistence
-                        log.info("Starting reloading for project {}", project.getName());
-                        reloadProjectData();
-                        log.info("Done reloading for project {}", project.getName());
-                        project.prettyPrint();
-                        log.info("\n");
+                    // call a project-type-specific reloading procedure that reloads some of the project data from
+                    // persistence
+                    log.info("Starting reloading for project {}", project.getName());
+                    reloadProjectData();
+                    log.info("Done reloading for project {}", project.getName());
+                    project.prettyPrint();
+                    log.info("\n");
+
+                    // check the termination flag
+                    synchronized (ProjectDataReloader.this) {
+                        if (stopped) {
+                            break;
+                        }
+                    }
+                } catch (Exception e) {
+                    log.error("Could not load project data for project {}: {}", project.getName(),
+                            e.getMessage());
+                }
+
+                // calculate the time taken for the reload
+                long timeUsedForLastReload = System.currentTimeMillis() - s;
+
+                // sleep until next fetch
+                if (timeUsedForLastReload < RELOAD_PERIOD) {
+                    long timeLeftToSleep = RELOAD_PERIOD - timeUsedForLastReload;
+
+                    while (timeLeftToSleep > 0) {
 
                         // check the termination flag
                         synchronized (ProjectDataReloader.this) {
@@ -93,43 +117,24 @@ public abstract class ProjectDataReloader {
                                 break;
                             }
                         }
-                    } catch (Exception e) {
-                        log.error("Could not load project data for project {}: {}", project.getName(),
-                            e.getMessage());
-                    }
 
-                    // calculate the time taken for the reload
-                    long timeUsedForLastReload = System.currentTimeMillis() - s;
+                        try {
 
-                    // sleep until next fetch
-                    if (timeUsedForLastReload < RELOAD_PERIOD) {
-                        long timeLeftToSleep = RELOAD_PERIOD - timeUsedForLastReload;
-
-                        while (timeLeftToSleep > 0) {
-
-                            // check the termination flag
-                            synchronized (ProjectDataReloader.this) {
-                                if (stopped) {
-                                    break;
-                                }
-                            }
-
-                            try {
-                                // sleep for SLEEPING_PERIOD
-                                Thread.sleep(SLEEPING_PERIOD_RELOADER1);
-                            } catch (InterruptedException ex) {
-                                continue;
-                            }
-
-                            // dec the timeLeft
-                            timeLeftToSleep -= SLEEPING_PERIOD_RELOADER1;
+                            // sleep for SLEEPING_PERIOD
+                            Thread.sleep(SLEEPING_PERIOD_RELOADER1);
+                        } catch (InterruptedException ex) {
+                            log.warn(INTERRUPTED, ex.getMessage());
+                            Thread.currentThread().interrupt();
                         }
-                    }
-                    reloadsCounter++;
-                }
 
-                log.info("Stopped project persistence reloading thread for project \" {} \"", project.getName());
+                        // dec the timeLeft
+                        timeLeftToSleep -= SLEEPING_PERIOD_RELOADER1;
+                    }
+                }
+                reloadsCounter++;
             }
+
+            log.info("Stopped project persistence reloading thread for project \" {} \"", project.getName());
         });
 
         thread.start();
@@ -212,18 +217,35 @@ public abstract class ProjectDataReloader {
         ProjectDataReloader reloader1 = getReloaderForType(new Project("project1", ProjectType.STATIC));
         
         ProjectDataReloader reloader2 = getReloaderForType(new Project("project2", ProjectType.LIVE));
-        
-        reloader1.start();
+
+        try {
+            assert reloader1 != null;
+            reloader1.start();
+        } catch (NullPointerException e){
+            log.warn("Null Pointer Exception: {}", e.getMessage());
+            Thread.currentThread().interrupt();
+        }
+
         try {
             Thread.sleep(SLEEPING_PERIOD_RELOADER1);
-        } catch (InterruptedException e) {
-            
+        } catch (InterruptedException ex) {
+            log.warn(INTERRUPTED, ex.getMessage());
+            Thread.currentThread().interrupt();
         }
-        reloader2.start();
+
+        try {
+            assert reloader2 != null;
+            reloader1.start();
+        } catch (NullPointerException e){
+            log.warn("Null Pointer Exception: {}", e.getMessage());
+            Thread.currentThread().interrupt();
+        }
         
         try {
             Thread.sleep(SLEEPING_PERIOD_RELOADER2);
-        } catch (InterruptedException e) {
+        } catch (InterruptedException ex) {
+            log.warn(INTERRUPTED, ex.getMessage());
+            Thread.currentThread().interrupt();
         }
         
         reloader1.stop();
