@@ -218,17 +218,23 @@ public abstract class ProjectDataReloader {
 
         ProjectDataReloader reloader2 = getReloaderForType(new Project("project2", ProjectType.LIVE));
 
+        assert reloader1 != null;
         reloader1.start();
         try {
             Thread.sleep(SLEEPING_PERIOD_RELOADER1);
-        } catch (InterruptedException e) {
+        } catch (InterruptedException ex) {
+            log.warn("Interrupted!", ex);
+            Thread.currentThread().interrupt();
 
         }
-        reloader2.start();
 
+        assert reloader2 != null;
+        reloader2.start();
         try {
             Thread.sleep(SLEEPING_PERIOD_RELOADER2);
-        } catch (InterruptedException e) {
+        } catch (InterruptedException ex) {
+            log.warn("Interrupted!", ex);
+            Thread.currentThread().interrupt();
         }
 
         reloader1.stop();
