@@ -15,6 +15,7 @@ import java.util.Date;
  */
 @Slf4j
 public abstract class ProjectDataReloader {
+    private static final String INTERRUPTED = "Interrupted!";
 
     /**
      * Reload period is 30 seconds
@@ -82,6 +83,7 @@ public abstract class ProjectDataReloader {
     }
 
     private void timeForTheLastReload(){
+
         // remember the start time
         long s = System.currentTimeMillis();
         long timeUsedForLastReload = System.currentTimeMillis() - s;
@@ -103,7 +105,7 @@ public abstract class ProjectDataReloader {
                     // sleep for SLEEPING_PERIOD
                     Thread.sleep(SLEEPING_PERIOD_RELOADER1);
                 } catch (InterruptedException ex) {
-                    log.warn("Interrupted!", ex);
+                    log.warn(INTERRUPTED, ex);
                     Thread.currentThread().interrupt();
                 }
 
@@ -223,7 +225,7 @@ public abstract class ProjectDataReloader {
         try {
             Thread.sleep(SLEEPING_PERIOD_RELOADER1);
         } catch (InterruptedException ex) {
-            log.warn("Interrupted!", ex);
+            log.warn(INTERRUPTED, ex);
             Thread.currentThread().interrupt();
 
         }
@@ -233,7 +235,7 @@ public abstract class ProjectDataReloader {
         try {
             Thread.sleep(SLEEPING_PERIOD_RELOADER2);
         } catch (InterruptedException ex) {
-            log.warn("Interrupted!", ex);
+            log.warn(INTERRUPTED, ex);
             Thread.currentThread().interrupt();
         }
 
